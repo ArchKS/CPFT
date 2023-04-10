@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Transfer</title>
+
+    <style>
+        html {
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 24px;
+            background-color: #dad6d6;
+            position: relative;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0;
+            background-color: #4CAF50;
+            position: absolute;
+        }
+
+        .progress-label {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            color: #000;
+            padding-left: 100px;
+        }
+
+        #upload-speed {
+            position: absolute;
+        }
+
+        .box-wrapper {
+            display: flex;
+        }
+
+        .box-wrapper .download {
+            flex: 1;
+        }
+
+        .box-wrapper .qrcode {
+            flex: 1;
+            margin-left: 100px;
+        }
+
+        .actions {
+            display: flex;
+        }
+
+        .actions .file-delete-container,
+        .actions .file-upload-container {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            text-align: center;
+            background-color: rgb(167, 167, 167);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-right: 40px;
+        }
+
+        .actions .file-delete-container:hover,
+        .actions .file-upload-container:hover {
+            background-color: #333;
+        }
+
+        .actions .file-upload-container input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        @media screen and (max-width: 900px) {
+            .qrcode {
+                display: none;
+            }
+
+            ul {
+                margin-left: -18px !important;
+            }
+
+            li a {
+                display: block;
+                width: 84vw;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+        }
+    </style>
+    <script>
+        function uploadFile() {
+            const input = document.getElementById('file-input');
+            const files = input.files;
+
+            let lastLoaded = 0;
+            let lastTimeStamp = 0;
+
+            const updateProgress = (event) => {
+                const progressBar = document.getElementById('upload-progress-bar');
+                const uploadSpeedElement = document.getElementById('upload-speed');
+
+                if (event.loaded > lastLoaded) {
+                    const currentTimeStamp = Date.now();
+                    const timeElapsed = (currentTimeStamp - lastTimeStamp) / 1000; // Convert milliseconds to seconds
+                    const bytesLoaded = event.loaded - lastLoaded;
+                    const uploadSpeed = bytesLoaded / timeElapsed;
+
+                    let speedText = 'B/s';
+                    let displaySpeed = uploadSpeed;
+                    if (uploadSpeed > 1024) {
+                        displaySpeed = uploadSpeed / 1024;
+                        speedText = 'KB/s';
+                    }
+                    if (uploadSpeed > 1024 * 1024) {
+                        displaySpeed = uploadSpeed / (1024 * 1024);
+                        speedText = 'MB/s';
+                    }
+
+                    uploadSpeedElement.innerText = `Upload speed: ${displaySpeed.toFixed(2)} ${speedText}`;
+
+                    lastLoaded = event.loaded;
+                    lastTimeStamp = currentTimeStamp;
+                }
+
+                progressBar.style.width = (event.loaded / event.total) * 100 + '%';
+            };
+
+            if (files.length > 0) {
+                const formData = new FormData();
+                for (const file of files) {
+                    formData.append('files', file);
+                }
+                const uploadProgressBar = document.getElementById('upload-progress-bar');
+                const uploadProgressLabel = document.getElementById('upload-progress-label');
+
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/upload', true);
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        updateProgress(event)
+                        const percentage = (event.loaded / event.total) * 100;
+                        uploadProgressBar.style.width = `${percentage}%`;
+                        uploadProgressLabel.innerText = `${Math.round(percentage)}%`;
+                    }
+                };
+
+                xhr.onload = () => {
+                    const data = JSON.parse(xhr.responseText);
+
+                    if (data.success) {
+                        // alert('File uploaded successfully');
+                        listFiles(); // 刷新文件列表
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+
+                    // 重置进度条
+                    uploadProgressBar.style.width = '0%';
+                    uploadProgressLabel.innerText = '0%';
+                };
+
+                xhr.send(formData);
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h1>File Transfer</h1>
+    <div class="box-wrapper">
+        <div class="download">
+            <div class="actions">
+                <div class="file-upload-container">
+                    Upload Files
+                    <input type="file" id="file-input" multiple>
+                </div>
+                <div class="file-delete-container" id="delete-button">Delete Files</div>
+            </div>
+            <h2>Download</h2>
+            <ul id="file-list"></ul>
+        </div>
+        <div class="qrcode">
+            <h2>QrCode</h2>
+            <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <div class="progress-container">
+        <div id="upload-progress-bar" class="progress-bar"></div>
+        <div id="upload-progress-label" class="progress-label">0%</div>
+        <div id="upload-speed">Upload speed: 0 B/s</div>
+    </div>
+</body>
+
+</html>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+    async function listFiles() {
+        const response = await fetch('/list_files');
+        const files = await response.json();
+        const fileList = document.getElementById('file-list');
+
+        fileList.innerHTML = '';
+
+        files.forEach(file => {
+            const listItem = document.createElement('li');
+            const link = document.createElement('a');
+            link.href = `/download/${file}`;
+            link.innerText = file;
+
+            listItem.appendChild(link);
+            fileList.appendChild(listItem);
+        });
+    }
+
+    const generatorQrCode = () => {
+        new QRCode("qrcode", {
+            text: window.location.href,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.H
+        });
+    }
+
+    const processDelBtn = () => {
+        // 处理 "Delete" 按钮的点击事件
+        const deleteButton = document.getElementById('delete-button');
+        deleteButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch('/delete', { method: 'POST' });
+                const data = await response.json();
+                listFiles();
+                console.log(data.result);
+            } catch (error) {
+                console.error('Error while deleting files:', error);
+            }
+        });
+    }
+    // 当页面加载时，显示文件列表
+    document.addEventListener('DOMContentLoaded', () => {
+        const fileInput = document.getElementById('file-input');
+        fileInput.addEventListener('change', uploadFile);
+        generatorQrCode();
+        processDelBtn();
+        listFiles();
+    });
+</script>
