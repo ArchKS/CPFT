@@ -1,12 +1,15 @@
 from flask import Flask, request, send_from_directory, flash, redirect, url_for, render_template,jsonify
 from pathlib import Path
 import socket
+from flask_cors import CORS  # 添加这一行
 import json
 import os
 
 UPLOAD_FOLDER = './uploads'
-app = Flask(__name__)
+app = Flask(__name__, static_folder=".", static_url_path="")
+# app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+CORS(app)  # 添加这一行
 
 @app.route('/', methods=['GET'])
 def index():
