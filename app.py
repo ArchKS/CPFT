@@ -4,6 +4,9 @@ import socket
 from flask_cors import CORS  # 添加这一行
 import json
 import os
+import webbrowser 
+from threading import Thread
+
 
 UPLOAD_FOLDER = './uploads'
 app = Flask(__name__, static_folder=".", static_url_path="")
@@ -69,9 +72,25 @@ def get_local_ip():
     local_ip = socket.gethostbyname(hostname)
     return local_ip
 
+# def run_server():
+#      app.run(debug=True, host='0.0.0.0', port=5100)
+
+
+def run_server():
+    app.run(host="0.0.0.0", port=5100)
 
 
 if __name__ == '__main__':
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
     app.run(debug=True, host='0.0.0.0', port=5100)
+
+    
+
+# if __name__ == "__main__":
+#     if not os.path.exists(UPLOAD_FOLDER):
+#         os.makedirs(UPLOAD_FOLDER)
+#     server_thread = Thread(target=run_server)
+#     server_thread.start()
+#     webbrowser.open("http://172.31.32.13:5100")
+#     server_thread.join()
